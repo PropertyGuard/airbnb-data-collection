@@ -1,0 +1,36 @@
+-- View: public.stonebridge
+
+-- DROP VIEW public.stonebridge;
+
+CREATE OR REPLACE VIEW public.stonebridge AS
+ SELECT st_transform(st_setsrid(st_makepoint(room.longitude::double precision, room.latitude::double precision), 4326), 2276) AS geom,
+    room.room_id,
+    room.host_id,
+    room.room_type,
+    room.country,
+    room.city,
+    room.neighborhood,
+    room.address,
+    room.reviews,
+    room.overall_satisfaction,
+    room.accommodates,
+    room.bedrooms,
+    room.bathrooms,
+    room.price,
+    room.deleted,
+    room.minstay,
+    room.last_modified,
+    room.latitude,
+    room.longitude,
+    room.survey_id,
+    room.coworker_hosted,
+    room.extra_host_languages,
+    room.name,
+    room.property_type,
+    room.currency,
+    room.rate_type
+   FROM room
+  WHERE room.survey_id = 3;
+
+ALTER TABLE public.stonebridge
+    OWNER TO postgres;
