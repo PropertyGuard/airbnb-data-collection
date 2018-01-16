@@ -621,23 +621,22 @@ class ABListing():
     def __get_bathrooms(self, tree):
         try:
             temp = tree.xpath(
-                "//div[@class='col-md-6']"
-                "/div/span[text()[contains(.,'Bathrooms:')]]"
-                "/../strong/text()"
+                "//*[@id='summary']/div[2]/div[1]/div[2]/div[1]/div[2]/div/div[4]/div/div[2]/span"
                 )
             if len(temp) > 0:
                 self.bathrooms = temp[0].strip()
             else:
                 temp = tree.xpath(
-                    "//div[@class='col-md-6']"
-                    "/div/span[text()[contains(.,'Bathrooms:')]]"
-                    "/../strong/text()"
-                    )
+                "//*[@id='summary']/div[2]/div[1]/div[2]/div[1]/div[2]/div/div[4]/div/div[2]/span"
+                )
                 if len(temp) > 0:
                     self.bathrooms = temp[0].strip()
             if self.bathrooms:
                 self.bathrooms = self.bathrooms.split('+')[0]
                 self.bathrooms = self.bathrooms.split(' ')[0]
+
+            self.bathrooms = self.bathrooms.replace(' bath', '')
+            self.bathrooms = self.bathrooms.replace(' baths', '')
             self.bathrooms = float(self.bathrooms)
         except:
             self.bathrooms = None

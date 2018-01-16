@@ -93,10 +93,10 @@ class ABSurvey():
 
     def listing_from_search_page_json(self, result, room_id, room_type):
         try:
-            listing = ABListing(self.config, room_id, self.survey_id, room_type)
             # listing
             json_listing = result["listing"]
-            listing.host_id = json_listing["primary_host"]["id"] if "primary_host" in json_listing else None
+            listing.host_id = json_listing["user"]["id"] if "user" in json_listing else None
+            listing.id = json_listing["id"]
             listing.address = json_listing["public_address"] if "public_address" in json_listing else None
             listing.reviews = json_listing["reviews_count"] if "reviews_count" in json_listing else None
             listing.overall_satisfaction = json_listing["star_rating"] if "star_rating" in json_listing else None
@@ -114,7 +114,7 @@ class ABSurvey():
             listing.price = json_pricing["rate"]["amount"] if "rate" in json_pricing else None
             listing.currency = json_pricing["rate"]["currency"] if "rate" in json_pricing else None
             listing.rate_type = json_pricing["rate_type"] if "rate_type" in json_pricing else None
-            return listing
+            return json_listing
         except:
             logger.exception("Error in survey.listing_from_search_page_json: returning None")
             sys.exit(-1)
@@ -514,6 +514,8 @@ class ABSurveyByBoundingBox(ABSurvey):
                 params["search_by_map"] = str(True)
                 params["price_min"] = str(price_range[0])
                 params["price_max"] = str(price_range[1])
+                params["items_per_grid"] = 30
+                params["key"] = "d306zoyjsyarp7ifhu67rjxn52tv0t20"
                 # make the http request
                 response = airbnb_ws.ws_request_with_repeats(self.config, self.config.URL_API_SEARCH_ROOT, params)
                 # process the response
@@ -522,23 +524,22 @@ class ABSurveyByBoundingBox(ABSurvey):
                             .format(p=params))
                     continue
                 json = response.json()
-                for result in json["results_json"]["search_results"]:
+                for result in json["explore_tabs"][0]["sections"][0]["listings"]:
                     room_id = int(result["listing"]["id"])
                     if room_id is not None:
                         room_count += 1
                         room_total += 1
-                        listing = self.listing_from_search_page_json(result, room_id, room_type)
-                        median_lists["latitude"].append(listing.latitude)
-                        median_lists["longitude"].append(listing.longitude)
-                        if listing is None:
+                        
+                        median_lists["latitude"].append(result["listing"]["lat"])
+                        median_lists["longitude"].append(result["listing"]["lng"])
+                        if result["listing"] is None:
                             continue
-                        if listing.host_id is not None:
-                            listing.deleted = 0
+                        if result["listing"]["user"]["id"] is not None:
                             if flag == self.config.FLAGS_ADD:
-                                if listing.save(self.config.FLAGS_INSERT_NO_REPLACE):
+                                if self.save_found_room(room_id):
                                     new_rooms += 1
                             elif flag == self.config.FLAGS_PRINT:
-                                print(room_type, listing.room_id)
+                                print(room_type, room_id)
                 # Log page-level results
                 logger.info("Page {page_number:02d} returned {room_count:02d} listings"
                         .format(page_number=page_number, room_count=room_count))
@@ -632,6 +633,25 @@ class ABSurveyByBoundingBox(ABSurvey):
                 subtree_previously_completed = True
                 logger.debug("Subtree previously completed: {quadtree}".format(quadtree=quadtree_node))
         return subtree_previously_completed
+
+    def save_found_room(self, room_id):
+        try:
+            sql = """
+            INSERT INTO found_room
+            (room_id, survey_id)
+            VALUES
+            (%s, %s)
+            """
+            conn = self.config.connect()
+            cur = conn.cursor()
+            cur.execute(sql, (room_id, self.survey_id))
+            cur.close()
+            conn.commit()
+            return True
+        except Exception as e:
+            logger.exception("Exception in  log_progress: {e}".format(e=type(e)))
+            conn.close()
+            return False
 
 
     def log_progress(self, room_type, guests, price_min, price_max,
