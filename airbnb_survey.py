@@ -514,8 +514,7 @@ class ABSurveyByBoundingBox(ABSurvey):
                 params["search_by_map"] = str(True)
                 params["price_min"] = str(price_range[0])
                 params["price_max"] = str(price_range[1])
-                params["items_per_grid"] = 30
-                params["key"] = "d306zoyjsyarp7ifhu67rjxn52tv0t20"
+                params["client_id"] = "3092nxybyb0otqw18e8nh5nty"
                 # make the http request
                 response = airbnb_ws.ws_request_with_repeats(self.config, self.config.URL_API_SEARCH_ROOT, params)
                 # process the response
@@ -524,7 +523,7 @@ class ABSurveyByBoundingBox(ABSurvey):
                             .format(p=params))
                     continue
                 json = response.json()
-                for result in json["explore_tabs"][0]["sections"][0]["listings"]:
+                for result in json["search_results"]:
                     room_id = int(result["listing"]["id"])
                     if room_id is not None:
                         room_count += 1
@@ -649,7 +648,7 @@ class ABSurveyByBoundingBox(ABSurvey):
             conn.commit()
             return True
         except Exception as e:
-            logger.exception("Exception in  log_progress: {e}".format(e=type(e)))
+            logger.exception("Exception in saving found room: {e}".format(e=type(e)))
             conn.close()
             return False
 
@@ -795,7 +794,7 @@ class ABSurveyByNeighborhood(ABSurvey):
             params["neighborhoods[]"] = neighborhood
             response = airbnb_ws.ws_request_with_repeats(self.config, self.config.URL_API_SEARCH_ROOT, params)
             json = response.json()
-            for result in json["results_json"]["search_results"]:
+            for result in json["search_results"]:
                 room_id = int(result["listing"]["id"])
                 if room_id is not None:
                     room_count += 1
@@ -982,7 +981,7 @@ class ABSurveyByZipcode(ABSurvey):
             params["room_types[]"] = room_type
             response = airbnb_ws.ws_request_with_repeats(self.config, self.config.URL_API_SEARCH_ROOT, params)
             json = response.json()
-            for result in json["results_json"]["search_results"]:
+            for result in json["search_results"]:
                 room_id = int(result["listing"]["id"])
                 if room_id is not None:
                     room_count += 1

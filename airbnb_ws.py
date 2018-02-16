@@ -81,6 +81,17 @@ def ws_request(config, url, attempt_id, params=None):
                     # randomly remove the proxy from the list, with probability 50%
                     if random.choice([True, False]):
                         config.HTTP_PROXY_LIST.remove(http_proxy)
+                        sql_update = """
+                        update proxy_servers
+                        set ip_blocked = true
+                        where ip_address = %s
+                        """
+                        conn = self.config.connect()
+                        cur = conn.cursor()
+                        cur.execute(sql_update, (http_proxy.replace(":3128", ""), ))
+                        cur.close()
+                        conn.commit()
+
                         logger.warning(
                             "Removing {http_proxy} from proxy list; {n} of {p} remain."
                             .format( http_proxy=http_proxy,

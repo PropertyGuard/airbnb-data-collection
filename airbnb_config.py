@@ -34,11 +34,11 @@ class ABConfig():
         self.FLAGS_PRINT = 9
         self.FLAGS_INSERT_REPLACE = True
         self.FLAGS_INSERT_NO_REPLACE = False
-        self.URL_ROOT = "https://www.airbnb.com/"
+        self.URL_ROOT = "https://api.airbnb.com/v2"
         self.URL_ROOM_ROOT = self.URL_ROOT + "rooms/"
         self.URL_HOST_ROOT = self.URL_ROOT + "users/show/"
         self.URL_SEARCH_ROOT = self.URL_ROOT + "s/"
-        self.URL_API_SEARCH_ROOT = self.URL_ROOT + "search/search_results"
+        self.URL_API_SEARCH_ROOT = self.URL_ROOT + "/search_results"
         self.SEARCH_AREA_GLOBAL = "UNKNOWN"  # special case: sample listings globally
         self.SEARCH_RECTANGLE_EDGE_BLUR = 0.1
         self.SEARCH_BY_NEIGHBORHOOD = 'neighborhood'  # default
@@ -74,16 +74,9 @@ class ABConfig():
             except Exception:
                 logger.error("Incomplete database information in " + config_file + ": cannot continue.")
                 sys.exit()
-            # network
+
             try:
-                self.HTTP_PROXY_LIST = config["NETWORK"]["proxy_list"].split(",")
-                self.HTTP_PROXY_LIST = [x.strip() for x in self.HTTP_PROXY_LIST]
-            except Exception:
-                logger.warning("No proxy_list in " + config_file + ": not using proxies")
-                self.HTTP_PROXY_LIST = []
-            self.HTTP_PROXY_LIST_COMPLETE = list(self.HTTP_PROXY_LIST)
-            logging.info("Complete proxy list has {p} proxies".format(p=len(self.HTTP_PROXY_LIST_COMPLETE)))
-            try:
+                self.populate_proxy_list()
                 self.USER_AGENT_LIST = config["NETWORK"]["user_agent_list"].split(",,")
                 self.USER_AGENT_LIST = [x.strip() for x in self.USER_AGENT_LIST]
                 self.USER_AGENT_LIST = [x.strip('"') for x in self.USER_AGENT_LIST]
@@ -134,3 +127,30 @@ class ABConfig():
         except Exception:
             logger.error("Failed to connect to database.")
             raise
+
+    def populate_proxy_list(self):
+        logger.info("Hello")
+        # network
+        try:
+            sql = """
+            select ip_address
+            from proxy_servers
+            where destroyed = false and online = true and ip_blocked = false
+            """
+
+            conn = self.connect()
+            cur = conn.cursor()
+            cur.execute(sql, ())
+            conn.commit()
+            proxy_servers = cur.fetchall()
+            cur.close()
+
+            logger.info("First IP:" + proxy_servers[0][0])
+
+            self.HTTP_PROXY_LIST = [x[0] + ":3128" for x in proxy_servers]
+            logger.info("First IP:" + self.HTTP_PROXY_LIST[0])
+        except Exception as ex:
+            logger.error(ex.message)
+            self.HTTP_PROXY_LIST = []
+        self.HTTP_PROXY_LIST_COMPLETE = list(self.HTTP_PROXY_LIST)
+        logging.info("Complete proxy list has {p} proxies".format(p=len(self.HTTP_PROXY_LIST_COMPLETE)))
